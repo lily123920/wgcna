@@ -1,0 +1,85 @@
+---
+title: "06 Exploring a gene network to external visualization software"
+output: html_document
+---
+
+### 加载R包
+```{r, message=FALSE}
+library(WGCNA)
+```
+
+### 准备数据
+```{r}
+# 导入表达矩阵和性状数据
+lnames1 = load(file = "./data/FemaleLiver-01-dataInput.RData")
+# 导入网络构建结果数据
+lnames2 = load(file = "./data/FemaleLiver-02-networkConstruction-stepByStep.RData")
+lnames1; lnames2
+```
+
+### 导出数据至VisANT
+```{r}
+# Recalculate topological overlap
+TOM = TOMsimilarityFromExpr(datExpr, power = 6);
+# Read in the annotation file
+annot = read.csv(file = "./data/GeneAnnotation.csv");
+# Select module
+module = "brown";
+# Select module probes
+probes = names(datExpr)
+inModule = (moduleColors==module);
+modProbes = probes[inModule];
+# Select the corresponding Topological Overlap
+modTOM = TOM[inModule, inModule];
+dimnames(modTOM) = list(modProbes, modProbes)
+# Export the network into an edge list file VisANT can read
+vis = exportNetworkToVisANT(modTOM,
+file = paste("VisANTInput-", module, ".txt", sep=""),
+weighted = TRUE,
+threshold = 0,
+probeToGene = data.frame(annot$substanceBXH, annot$gene_symbol) )
+```
+
+由于brown module太大，可以限制输出基因数量，比如该模块内的top30 hub 基因。
+```{r}
+nTop = 30;
+IMConn = softConnectivity(datExpr[, modProbes]);
+top = (rank(-IMConn) <= nTop)
+vis = exportNetworkToVisANT(modTOM[top, top],
+file = paste("VisANTInput-", module, "-top30.txt", sep=""),
+weighted = TRUE,
+threshold = 0,
+probeToGene = data.frame(annot$substanceBXH, annot$gene_symbol) )
+```
+
+### 导出数据至Cytoscape
+这里以Brown和red modules为例。
+需要准备一个edge file和一个node file。
+```{r}
+# Recalculate topological overlap if needed
+TOM = TOMsimilarityFromExpr(datExpr, power = 6);
+# Read in the annotation file
+annot = read.csv(file = "./data/GeneAnnotation.csv");
+# Select modules
+modules = c("brown", "red");
+# Select module probes
+probes = names(datExpr)
+inModule = is.finite(match(moduleColors, modules));
+modProbes = probes[inModule];
+modGenes = annot$gene_symbol[match(modProbes, annot$substanceBXH)];
+# Select the corresponding Topological Overlap
+modTOM = TOM[inModule, inModule]
+dimnames(modTOM) = list(modProbes, modProbes)
+# Export the network into edge and node list files Cytoscape can read
+cyt = exportNetworkToCytoscape(modTOM,
+                               edgeFile = paste("CytoscapeInput-edges-",
+                                                paste(modules, collapse="-"), ".txt", sep=""),
+                               nodeFile = paste("CytoscapeInput-nodes-", paste(modules, collapse="-"), ".txt", sep=""),
+                               weighted = TRUE,
+                               threshold = 0.02,
+                               nodeNames = modProbes,
+                               altNodeNames = modGenes,
+                               nodeAttr = moduleColors[inModule])
+str(cyt)
+```
+注意：这里尽可能准备所有需要的edge和node信息。。。

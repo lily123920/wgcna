@@ -1,0 +1,34 @@
+---
+title: "Installation of Required Packages"
+output: html_document
+---
+跟着官网安装以下R包，网址如下：
+https://horvath.genetics.ucla.edu/html/CoexpressionNetwork/Rpackages/WGCNA/index.html#abstract
+### 一、安装WGCNA包
+```{r}
+# install.packages("WGCNA")
+```
+
+### 二、功能富集分析包
+官方建议使用anRichment进行富集分析
+建议弃用WGCNA包中的：GOenrichmentAnalysis()和userListEnrichment()
+```{r}
+# source("https://horvath.genetics.ucla.edu/html/CoexpressionNetwork/GeneAnnotation/installAnRichment.R")
+# installAnRichment()
+```
+
+### 其他说明：
+若手动安装，则需要先依次安装下面的包。。。不建议使用。
+```{r echo=TRUE}
+# 安装依赖包
+# install.packages(c("matrixStats", "Hmisc", "splines", "foreach", "doParallel", "fastcluster", "dynamicTreeCut", "survival"))
+# BiocManager::install(c("GO.db", "preprocessCore", "impute"))
+# # 安装注释包
+# orgCodes = c("Hs", "Mm", "Rn", "Pf", "Sc", "Dm", "Bt", "Ce", "Cf", "Dr", "Gg")
+# orgExtensions = c(rep(".eg", 4), ".sgd", rep(".eg", 6))
+# packageNames = paste("org.", orgCodes, orgExtensions, ".db", sep="")
+# BiocManager::install(c("GO.db", "KEGG.db", "topGO", packageNames, "hgu133a.db", "hgu95av2.db", "annotate", "hgu133plus2.db", "SNPlocs.Hsapiens.dbSNP.20100427", "minet", "OrderedList"))
+```
+
+
+

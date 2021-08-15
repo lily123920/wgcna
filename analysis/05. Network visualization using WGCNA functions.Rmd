@@ -1,0 +1,116 @@
+---
+title: "05 Network visualization using WGCNA functions"
+output: html_document
+---
+
+注意:由于包的版本问题，可视化图形中的一些美学设置如颜色可能与官方教程存在不同，但是图反映的信息是一致的。
+
+### 加载R包
+```{r, message=FALSE}
+library(WGCNA)
+```
+
+
+### 准备数据
+```{r}
+# 导入表达矩阵和性状数据
+lnames1 = load(file = "./data/FemaleLiver-01-dataInput.RData")
+# 导入网络构建结果数据
+lnames2 = load(file = "./data/FemaleLiver-02-networkConstruction-stepByStep.RData")
+lnames1; lnames2
+nGenes = ncol(datExpr)
+nSamples = nrow(datExpr)
+nGenes; nSamples
+```
+
+### 一、基因网络可视化
+在WGCNA分析中，所谓加权网络本质就是TOM矩阵或邻近矩阵。。。加权网络的可视化也就是对TOM矩阵的可视化。。。
+
+##### 1. 准备绘图数据
+
+需要准备三个数据：dissTOM矩阵；基因聚类结果geneTree；模块颜色标签。
+
+```{r, message=FALSE}
+TOM <- TOMsimilarityFromExpr(datExpr, power = 6)
+dissTOM = 1 - TOM # 前面数据处理过程中可以直接保存。。。
+```
+
+##### 2. 可视化
+
+该热图绘制时间较长。
+
+```{r, fig.cap="图形解读：每一行和每一列均对应基因，单元颜色映射的是TOM矩阵值：深颜色代表low overlap，浅颜色代表higher overlap。 浅颜色区块代表modules。基因聚类树和相应的模块信息位于图形左侧及上侧。"}
+# 通过幂计算，突出强相关性
+plotTOM = dissTOM^7
+# 设置对角线为NA【作图美学角度考虑】
+diag(plotTOM) = NA
+# 可视化
+TOMplot(plotTOM, geneTree, moduleColors, main = "Network heatmap plot, all genes")
+```
+
+为了节省时间，可以限定用于绘图的基因数量，如400.。。代码如下：
+```{r}
+nSelect = 400
+# 设置随机数种子
+set.seed(10);
+select = sample(nGenes, size = nSelect)
+# 提取dissTOM矩阵
+selectTOM = dissTOM[select, select];
+# 对于基因聚类结果，必须重新聚类
+selectTree = hclust(as.dist(selectTOM), method = "average")
+# 提取modulecolor信息
+selectColors = moduleColors[select]
+# Open a graphical window
+sizeGrWindow(9,9)
+
+# 从可视化突出重要信息角度，做以下数据处理
+plotDiss = selectTOM^7
+diag(plotDiss) = NA
+
+TOMplot(plotDiss, selectTree, selectColors, main = "Network heatmap plot, selected genes")
+```
+
+
+### 二、eigengenes网络可视化
+
+所谓epigengene network，其实质是不同module的epigengene的相关性。该相关性反应的是模块间的相似性。
+
+##### 1. 准备数据
+```{r}
+# Recalculate module eigengenes
+MEs = moduleEigengenes(datExpr, moduleColors)$eigengenes
+# Isolate weight from the clinical traits
+weight = as.data.frame(datTraits$weight_g);
+names(weight) = "weight"
+# Add the weight to existing module eigengenes
+MET = orderMEs(cbind(MEs, weight))
+```
+
+##### 2. 可视化
+```{r}
+# Plot the relationships among the eigengenes and the trait
+par(cex = 0.9)
+plotEigengeneNetworks(MET, "", marDendro = c(0,4,1,2), marHeatmap = c(3,4,1,2), cex.lab = 0.8, xLabelsAngle
+= 90)
+```
+
+也可以将聚类树和热图分开展示，代码如下：
+```{r}
+plotEigengeneNetworks(MET, "Eigengene dendrogram", marDendro = c(0,4,2,0),
+plotHeatmaps = FALSE)
+# Plot the heatmap matrix (note: this plot will overwrite the dendrogram plot)
+par(cex = 1.0)
+plotEigengeneNetworks(MET, "Eigengene adjacency heatmap", marHeatmap = c(3,4,2,2),
+plotDendrograms = FALSE, xLabelsAngle = 90)
+```
+图形解读：eigengene网络的可视化，反映的是modules间的关系及module与eigengenes间的关系。。。a图：epigengenes的dissimilarity =  1 − cor(EI , EJ ); b图：eigengene adjacency: AIJ =
+(1 + cor(EI , EJ ))/2
+
+### 总结
+这一步不涉及任何数据分析过程及算法等。
+主要体会以下几点：
+①network是什么？
+②为什么要进行该环节的可视化？或者说这些可视化可以反映什么信息？
+③两个与可视化相关的数据处理小tips。
+④可视化的实现函数：
+

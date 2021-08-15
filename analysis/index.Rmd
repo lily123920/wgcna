@@ -1,0 +1,26 @@
+---
+title: "WGCNA_workflow"
+site: workflowr::wflow_site
+output:
+  workflowr::wflow_html:
+    toc: false
+editor_options:
+  chunk_output_type: console
+---
+
+Welcome to my research website.
+
+该流程参考自WGCNA官网。
+
+
+1. [数据导入、清洗及预处理.](01.-Data-Input,-Cleaning-and-Pre-processing.html) 
+
+2. [网络构建及模块识别.](02.-step-by-step-network-construction-and-module-detection.html)
+
+3. [模块与性状关联分析及重要基因识别.](03.-Relating-modules-to-external-information-and-identifying-important-genes.html)
+
+4. [网络分析与功能富集分析的整合.](04.-Interfacing-network-analysis-with-other-data-such-as-functional-annotation-and-gene-ontology.html)
+
+5. [网络可视化.](05.-Network-visualization-using-WGCNA-functions.html)
+
+6. [导出cytoscape所需数据.](06.-Exploring-a-gene-network-to-external-visualization-software.html)

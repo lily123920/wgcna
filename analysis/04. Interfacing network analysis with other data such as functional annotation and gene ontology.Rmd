@@ -1,0 +1,63 @@
+---
+title: Step 4 Interfacing network analysis with other data such as functional annotation and gene ontology
+output: html_document
+---
+
+### 加载R包
+```{r, message=FALSE}
+library(WGCNA)
+```
+
+### 准备数据
+```{r eval=FALSE, message=FALSE, include=TRUE}
+# 导入表达矩阵和性状数据
+lnames1 = load(file = "./data/FemaleLiver-01-dataInput.RData")
+# 导入网络构建结果数据
+lnames2 = load(file = "./data/FemaleLiver-02-networkConstruction-stepByStep.RData")
+lnames1; lnames2
+```
+该部分分析，相当于对模块内基因进行功能表征。这样可以增加结果的生物可解读性。
+
+### 一、导出基因列表
+
+后续分析可以借助一些在线软件或其他工具，此时，需要导出待分析的基因列表。
+这一部分主要是提取基因列表信息，教程中提取的是LocusLinkID信息。。。
+这里可以根据自己的实际需求进行提取。
+```{r eval=FALSE, message=FALSE, include=TRUE}
+# 读入基因注释信息
+annot = read.csv(file = "./data/FemaleLiver-Data/GeneAnnotation.csv");
+# 按照datExpr基因顺序，匹配annot和datExpr顺序。
+probes = names(datExpr)
+probes2annot = match(probes, annot$substanceBXH)
+# 按照datExpr顺序，提取基因的LocusLinkID信息
+allLLIDs = annot$LocusLinkID[probes2annot]
+# 选择兴趣的模块
+intModules = c("magenta", "purple", "midnightblue")
+for (module in intModules){ 
+  # Select module probes
+  modGenes = (moduleColors==module)
+  # Get their entrez ID codes
+  modLLIDs = allLLIDs[modGenes]
+  # Write them into a file
+  fileName = paste("LocusLinkIDs-", module, ".txt", sep="");
+  write.table(as.data.frame(modLLIDs), file = fileName,
+  row.names = FALSE, col.names = FALSE)
+}
+# As background in the enrichment analysis, we will use all probes in the analysis.
+fileName = paste("LocusLinkIDs-all.txt", sep="");
+write.table(as.data.frame(allLLIDs), file = fileName,
+row.names = FALSE, col.names = FALSE)
+```
+
+### 二、富集分析
+这一部分的分析可以借助其他R包工具实现，如clusterprofiler等。
+```{r eval=FALSE, message=FALSE, include=TRUE}
+# 利用GO数据库进行富集分析
+GOenr = GOenrichmentAnalysis(moduleColors, allLLIDs, organism = "mouse", nBestP = 10, verbose = FALSE)
+# 提取富集到的条目信息：默认每个module返回10个terms
+tab = GOenr$bestPTerms[[4]]$enrichment
+# 保存富集分析结果
+write.table(tab, file = "./output/GOEnrichmentTable.csv", sep = ",", quote = TRUE, row.names = FALSE)
+```
+
+总结：这一部分主要借鉴思路，为了增加生物学意义的可解释性，对模块内的基因进行功能富集分析，看模块的的基因主要富集到哪些功能条目或者通路。

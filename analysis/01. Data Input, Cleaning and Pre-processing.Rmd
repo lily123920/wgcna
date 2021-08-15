@@ -1,0 +1,147 @@
+---
+title: "Step1 Data Input, Cleaning and Pre-processing"
+output: html_document
+---
+### 教程说明
+该教程使用的数据集发表在Ghazalpour et al (2006)。
+数据集包含3600个基因的表达数据【原始数据集包含20000个基因，此处只保留了变异度最高和关联性最大的一些基因进行分析】
+
+
+该步骤是所有网络分析的初始步骤。具体操作包括：
+1. 导入数据
+2. 将数据整理为适合网络分析的格式
+3. 清洗数据：去掉离群值及有过多缺失值的sample或gene。
+
+### 加载R包
+```{r, message=FALSE}
+library(WGCNA)
+```
+
+
+### 一、准备表达数据
+#### （一）导入数据
+初始数据为：一行对应一个基因的记录；列名为样本名F2_2
+处理后数据为：行名为样本名，一列对应一个基因的记录。
+```{r}
+femData = read.csv("./data/LiverFemale3600.csv")
+dim(femData)
+names(femData)
+# 去掉一些描述性信息所在的列
+datExpr0 = as.data.frame(t(femData[, -c(1:8)]))
+colnames(datExpr0) = femData$substanceBXH
+rownames(datExpr0) = colnames(femData)[-c(1:8)]
+```
+
+#### （二）数据清洗
+##### 1. 检查数据是否存在异常值，及是否存在过多NA值的sample或gene。
+```{r}
+# 检查smaple或gene是否包含过多缺失值
+gsg = goodSamplesGenes(datExpr0, verbose = 3)
+str(gsg) # 返回一个列表。TRUE代表gene或sample不包含过多缺失值；FALSE代表包含过多缺失值
+gsg$allOK # 若为TRUE，代表所有基因和样本通过筛查；否则需要对样本和基因进行剔除。
+```
+
+剔除不合格gene或sample的代码如下：
+```{r}
+if (!gsg$allOK){
+# Optionally, print the gene and sample names that were removed:
+if (sum(!gsg$goodGenes)>0)
+printFlush(paste("Removing genes:", paste(names(datExpr0)[!gsg$goodGenes], collapse = ", ")));
+if (sum(!gsg$goodSamples)>0)
+printFlush(paste("Removing samples:", paste(rownames(datExpr0)[!gsg$goodSamples], collapse = ", ")));
+# Remove the offending genes and samples from the data:
+datExpr0 = datExpr0[gsg$goodSamples, gsg$goodGenes]
+}
+```
+
+##### 2. 检查异常值
+原理：对样本进行聚类，通过聚类树判断是否存在离群sample。
+
+2.1 对samples进行聚类分析。
+```{r}
+sampleTree = hclust(dist(datExpr0), method = "average") #dist函数默认计算样本间的欧氏距离。
+# hclust对样本按照欧氏距离进行聚类。
+# 返回结果为一个列表，包含样本名、及样本在聚类树中的位置（order和height）
+
+# 可视化
+{sizeGrWindow(12,9) # 设置图床大小
+plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5,
+cex.axis = 1.5, cex.main = 2)
+#结果解读：存在一个离群样本F2_221。
+
+# 设定切割的height阈值为15，并在图中划线展示
+abline(h = 15, col = "red")}
+```
+
+2.2 去除离群值
+可以手动剔除；这里使用自动剔除的方法。
+```{r}
+# 根据阈值确定样本的module信息
+clust = cutreeStatic(sampleTree, cutHeight = 15, minSize = 10)
+table(clust)
+# clust 1 包含欲保留样本；而clust 0 包含离群样本
+keepSamples = (clust==1)
+datExpr = datExpr0[keepSamples, ]
+nGenes = ncol(datExpr) 
+nSamples = nrow(datExpr)
+nGenes; nSamples
+```
+### 二、准备临床表型信息
+#### (一)导入数据，并保留需要的列
+```{r}
+traitData = read.csv("./data/ClinicalTraits.csv")
+dim(traitData) 
+colnames(traitData) # 该矩阵包含361个样本的38种临床信息
+
+# 筛选临床信息：只保留需要的列
+allTraits = traitData[, -c(31, 16)]
+allTraits = allTraits[, c(2, 11:36)]
+dim(allTraits)
+colnames(allTraits) 
+```
+####（二）调整行名与表达矩阵行名一致
+```{r}
+femaleSamples = rownames(datExpr)
+traitRows = match(femaleSamples, allTraits$Mice)
+datTraits = allTraits[traitRows, -1]
+rownames(datTraits) = allTraits[traitRows, 1]
+dim(datTraits)
+head(datTraits)
+```
+
+小结：该步骤最终得到两个data.frame，分别为：
+1. datExpr: 基因表达数据
+2. datTraits：临床表型数据
+并且，两个data.frame的行名均为样本名，且顺序一致。
+
+```{r}
+rownames(datExpr)[1:10]
+rownames(datTraits)[1:10]
+identical(rownames(datExpr), rownames(datTraits))
+```
+```{r}
+collectGarbage()
+```
+
+### 三、简单数据探索
+官方教程在这里查看了临床表型如何与样本聚类树相关。
+```{r}
+# 对samples重新聚类
+sampleTree2 = hclust(dist(datExpr), method = "average")
+
+# 临床表型数据框 →→→ 颜色矩阵：红色- 高，白色 -低，grey - NA
+traitColors = numbers2colors(datTraits, signed = FALSE)
+
+# 上：层级聚类树； 下：临床表型热图。
+plotDendroAndColors(sampleTree2, traitColors,
+groupLabels = colnames(datTraits),
+main = "Sample dendrogram and trait heatmap")
+```
+
+### 保存数据
+```{r}
+save(datExpr, datTraits, file = "./output/FemaleLiver-01-dataInput.RData")
+```
+
+
+

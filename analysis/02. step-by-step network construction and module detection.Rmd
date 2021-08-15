@@ -1,0 +1,208 @@
+---
+title: "Step2 Step-by-step network construction and module detection"
+output: html_document
+---
+
+### 环境配置
+```{r, message = FALSE}
+library(WGCNA)
+```
+### 准备分析数据
+```{r}
+lnames = load(file = "./data/FemaleLiver-01-dataInput.RData")
+lnames
+```
+
+### 一、选择软阈值β：网络拓扑分析
+更多关于β的介绍参考文献：A general framework for weighted gene co-expression network analysis. Statistical
+Applications in Genetics and Molecular Biology,2005.
+
+这里主要介绍通过pickSoftThreshold函数确定软阈值过程。
+
+##### 1. 拓扑网络分析
+```{r}
+# 选择一组软阈值
+powers = c(c(1:10), seq(from = 12, to=20, by=2))
+powers
+
+# 进行拓扑网络分析
+sft = pickSoftThreshold(datExpr, powerVector = powers, verbose = 5)
+str(sft)
+```
+
+##### 2. 可视化
+2.1  sclae-free fit index作为y轴画图
+-sign(sft$fitIndices[,3])*sft$fitIndices[,2]
+```{r}
+cex1 = 0.9
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+main = paste("Scale independence"))
+
+text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+labels=powers,cex=cex1,col="red")
+# this line corresponds to using an R^2 cut-off of h
+abline(h=0.90,col="red")
+```
+2.2 mean connectivity (degree)作为y轴画图
+mean connectivity 对应sft$fitIndices的第五列。
+```{r}
+cex1 = 0.9
+plot(sft$fitIndices[,1], sft$fitIndices[,5],
+xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+main = paste("Mean connectivity"))
+
+text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+```
+
+根据上图，选择power = 6，为无尺度网络fit index达到0.9对应的最小power值。
+
+### 二、co-expression similarity and adjacency
+计算基因邻近性adjacency，并返回邻近性矩阵。
+```{r}
+softPower = 6
+adjacency = adjacency(datExpr, power = softPower) # 返回每个基因对的邻近性
+dim(adjacency) # 行和列均对应基因。。。
+class(adjacency)
+adjacency[1:4, 1:4]
+```
+
+### 三、Topological Overlap Matrix(TOM)
+将邻近矩阵转化为TOM矩阵。
+意义：1. 可最大程度降低噪声和虚假关联的影响；2. 见其他资料。
+```{r}
+TOM = TOMsimilarity(adjacency, verbose = F)
+dissTOM = 1-TOM
+dim(TOM) # 维度同adjacency矩阵。行和列均对应基因
+TOM[1:4, 1:4]
+dissTOM[1:4,1:4]
+```
+### 四、cluster分析
+##### 1. 聚类分析及可视化
+输入数据为dissTOM矩阵；
+实现函数为fastcluster::hclust【与普通hclust相比，速度更快】
+```{r}
+geneTree = hclust(as.dist(dissTOM), method = "average");
+```
+
+可视化
+```{r}
+plot(geneTree, xlab="", sub="", main = "Gene clustering on TOM-based dissimilarity",
+labels = FALSE, hang = 0.04);
+```
+图说明：一个短竖线——一个leaf——一个基因；branches —— 相互关联、高度共表达的基因簇。
+
+
+##### 2. module identification
+模块识别等价于识别上图中的独立branches 【cutting the branches off the dendrogram】。
+模块识别有多种方法可供选择，这里使用Dynamic Tree Cut（dynamicTreeCut包）的方法。
+
+输入数据为：聚类结果geneTree, 不相似性TOM矩阵dissTOM
+```{r}
+# 最小模块基因数：30是一个相对较大的数值。
+minModuleSize = 30
+# 模块识别
+dynamicMods = cutreeDynamic(dendro = geneTree, distM = dissTOM,
+deepSplit = 2, pamRespectsDendro = FALSE,
+minClusterSize = minModuleSize, verbose = F)
+# dynamicMods为一个向量，数值对应基因的模块信息。
+dynamicMods[1:4]
+table(dynamicMods)
+```
+结果解读：所有基因共被划分到22个模块，分别标记为1：22，且标号越大，模块越小。此外，0对应未被分配到任何模块的基因。
+
+基因模块识别结果可视化
+```{r}
+# 将模块信息映射为颜色信息
+dynamicColors = labels2colors(dynamicMods)
+table(dynamicColors)
+# 聚类树和模块信息可视化
+plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut",
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05,
+main = "Gene dendrogram and module colors")
+```
+
+
+### 五、合并具有相似表达谱的modules
+Dynamic Tree Cut函数可能会将表达模式非常相似的模块识别为不同模块，因此建议合并这种相似性模块。
+实现原理：
+①首先计算模块的eigengenes:本质为模块内部基因的PCA分析
+②根据eigengenes之间的相关性对模块聚类，
+③合并模块。
+
+①计算模块的eigengenes
+```{r}
+MEList = moduleEigengenes(datExpr, colors = dynamicColors)
+MEs = MEList$eigengenes
+MEs[1:4, 1:4]
+# 计算模块间的不相似性
+MEDiss = 1-cor(MEs)
+```
+②根据eigengenes之间的相关性对模块聚类
+```{r}
+METree = hclust(as.dist(MEDiss), method = "average")
+# 结果可视化
+plot(METree, main = "Clustering of module eigengenes",
+xlab = "", sub = "")
+```
+③确定阈值，合并模块
+确定阈值为0.25，对应相关性系数为0.75。
+```{r}
+MEDissThres = 0.25
+# 可视化
+plot(METree, main = "Clustering of module eigengenes",
+xlab = "", sub = "")
+abline(h=MEDissThres, col = "red")
+# 合并模块
+merge = mergeCloseModules(datExpr, dynamicColors, cutHeight = MEDissThres, verbose = 3)
+# 提取合并后的模块与颜色对应信息
+mergedColors = merge$colors;
+# 提取合并后的模块的eigengenes信息
+mergedMEs = merge$newMEs;
+```
+
+### 其他简单数据探索
+对合并前后的模块信息进行可视化
+```{r}
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
+c("Dynamic Tree Cut", "Merged dynamic"),
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05)
+
+```
+### 保存数据
+```{r}
+# Rename to moduleColors
+moduleColors = mergedColors
+# Construct numerical labels corresponding to the colors
+colorOrder = c("grey", standardColors(50));
+moduleLabels = match(moduleColors, colorOrder)-1;
+MEs = mergedMEs
+# Save module colors and labels for use in subsequent parts
+save(MEs, moduleLabels, moduleColors, geneTree, file = "./output/FemaleLiver-02-networkConstruction-stepByStep.RData")
+```
+
+### 总结：
+这一步，我们最终获取的信息包括：
+MEs:合并后的每个模块的epigengene信息
+moduleLabels: 合并后的每个基因对应的模块标签信息
+moduleLabels: 合并后的每个基因对应的模块颜色信息【WGCNA中用颜色代表模块】
+geneTree：基因层级聚类结果
+
+数据格式如下：
+```{r}
+dim(MEs)
+MEs[1:4, 1:4]
+
+length(moduleLabels)
+moduleLabels[1:4]
+
+length(moduleColors)
+moduleColors[1:4]
+
+str(geneTree)
+```
+
+
+
