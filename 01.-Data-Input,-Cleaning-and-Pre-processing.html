@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Step1 Data Input, Cleaning and Pre-processing</title>
+
+<script src="site_libs/header-attrs-2.10/header-attrs.js"></script>
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">myproject</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Step1 Data Input, Cleaning and Pre-processing</h1>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span> workflowr <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2021-08-15
+</p>
+<p>
+<strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong> <code>wgcna/</code> <span class="glyphicon glyphicon-question-sign" aria-hidden="true" title="This is the local directory in which the code in this file was executed."> </span>
+</p>
+<p>
+This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis was created with <a
+  href="https://github.com/jdblischak/workflowr">workflowr</a> (version 1.6.2). The <em>Checks</em> tab describes the reproducibility checks that were applied when the results were created. The <em>Past versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date </a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git repository, you know the exact version of the code that produced these results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the global environment can affect the analysis in your R Markdown file in unknown ways. For reproduciblity it’s best to always run the code in an empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20210814code"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Seed:</strong> <code>set.seed(20210814)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20210814code" class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20210814)</code> was run prior to running the code in the R Markdown file. Setting a seed ensures that any results that rely on randomness, e.g. subsampling or permutations, are reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Session information:</strong> recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be confident that you successfully produced the results during this run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrong4ffc582"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> 4ffc582 </a>
+</p>
+</div>
+<div id="strongRepositoryversionstrong4ffc582" class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version 4ffc582. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .DS_Store
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+    Ignored:    analysis/.DS_Store
+
+Untracked files:
+    Untracked:  05.-Network-visualization-using-WGCNA-functions.Rmd
+    Untracked:  analysis/01.-Data-Input,-Cleaning-and-Pre-processing.Rmd
+
+Unstaged changes:
+    Modified:   Untitled.R
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not included in this status report because it is ok for generated content to have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were made to the R Markdown (<code>analysis/01. Data Input, Cleaning and Pre-processing.Rmd</code>) and HTML (<code>docs/01. Data Input, Cleaning and Pre-processing.html</code>) files. If you’ve configured a remote Git repository (see <code>?wflow_git_remote</code>), click on the hyperlinks in the table below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+44f102b
+</td>
+<td>
+lily123920
+</td>
+<td>
+2021-08-15
+</td>
+<td>
+change project name
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="教程说明" class="section level3">
+<h3>教程说明</h3>
+<p>该教程使用的数据集发表在Ghazalpour et al (2006)。 数据集包含3600个基因的表达数据【原始数据集包含20000个基因，此处只保留了变异度最高和关联性最大的一些基因进行分析】</p>
+<p>该步骤是所有网络分析的初始步骤。具体操作包括： 1. 导入数据 2. 将数据整理为适合网络分析的格式 3. 清洗数据：去掉离群值及有过多缺失值的sample或gene。</p>
+</div>
+<div id="加载r包" class="section level3">
+<h3>加载R包</h3>
+<pre class="r"><code>library(WGCNA)</code></pre>
+</div>
+<div id="一准备表达数据" class="section level3">
+<h3>一、准备表达数据</h3>
+<div id="一导入数据" class="section level4">
+<h4>（一）导入数据</h4>
+<p>初始数据为：一行对应一个基因的记录；列名为样本名F2_2 处理后数据为：行名为样本名，一列对应一个基因的记录。</p>
+<pre class="r"><code>femData = read.csv(&quot;./data/LiverFemale3600.csv&quot;)
+dim(femData)</code></pre>
+<pre><code>[1] 3600  143</code></pre>
+<pre class="r"><code>names(femData)</code></pre>
+<pre><code>  [1] &quot;substanceBXH&quot;   &quot;gene_symbol&quot;    &quot;LocusLinkID&quot;    &quot;ProteomeID&quot;    
+  [5] &quot;cytogeneticLoc&quot; &quot;CHROMOSOME&quot;     &quot;StartPosition&quot;  &quot;EndPosition&quot;   
+  [9] &quot;F2_2&quot;           &quot;F2_3&quot;           &quot;F2_14&quot;          &quot;F2_15&quot;         
+ [13] &quot;F2_19&quot;          &quot;F2_20&quot;          &quot;F2_23&quot;          &quot;F2_24&quot;         
+ [17] &quot;F2_26&quot;          &quot;F2_37&quot;          &quot;F2_42&quot;          &quot;F2_43&quot;         
+ [21] &quot;F2_45&quot;          &quot;F2_46&quot;          &quot;F2_47&quot;          &quot;F2_48&quot;         
+ [25] &quot;F2_51&quot;          &quot;F2_52&quot;          &quot;F2_54&quot;          &quot;F2_63&quot;         
+ [29] &quot;F2_65&quot;          &quot;F2_66&quot;          &quot;F2_68&quot;          &quot;F2_69&quot;         
+ [33] &quot;F2_70&quot;          &quot;F2_71&quot;          &quot;F2_72&quot;          &quot;F2_78&quot;         
+ [37] &quot;F2_79&quot;          &quot;F2_80&quot;          &quot;F2_81&quot;          &quot;F2_83&quot;         
+ [41] &quot;F2_86&quot;          &quot;F2_87&quot;          &quot;F2_88&quot;          &quot;F2_89&quot;         
+ [45] &quot;F2_107&quot;         &quot;F2_108&quot;         &quot;F2_109&quot;         &quot;F2_110&quot;        
+ [49] &quot;F2_111&quot;         &quot;F2_112&quot;         &quot;F2_117&quot;         &quot;F2_119&quot;        
+ [53] &quot;F2_125&quot;         &quot;F2_126&quot;         &quot;F2_127&quot;         &quot;F2_141&quot;        
+ [57] &quot;F2_142&quot;         &quot;F2_143&quot;         &quot;F2_144&quot;         &quot;F2_145&quot;        
+ [61] &quot;F2_154&quot;         &quot;F2_155&quot;         &quot;F2_156&quot;         &quot;F2_157&quot;        
+ [65] &quot;F2_162&quot;         &quot;F2_163&quot;         &quot;F2_164&quot;         &quot;F2_165&quot;        
+ [69] &quot;F2_166&quot;         &quot;F2_167&quot;         &quot;F2_169&quot;         &quot;F2_180&quot;        
+ [73] &quot;F2_181&quot;         &quot;F2_182&quot;         &quot;F2_187&quot;         &quot;F2_188&quot;        
+ [77] &quot;F2_189&quot;         &quot;F2_190&quot;         &quot;F2_191&quot;         &quot;F2_192&quot;        
+ [81] &quot;F2_194&quot;         &quot;F2_195&quot;         &quot;F2_200&quot;         &quot;F2_201&quot;        
+ [85] &quot;F2_212&quot;         &quot;F2_213&quot;         &quot;F2_214&quot;         &quot;F2_215&quot;        
+ [89] &quot;F2_221&quot;         &quot;F2_222&quot;         &quot;F2_223&quot;         &quot;F2_224&quot;        
+ [93] &quot;F2_225&quot;         &quot;F2_226&quot;         &quot;F2_227&quot;         &quot;F2_228&quot;        
+ [97] &quot;F2_241&quot;         &quot;F2_242&quot;         &quot;F2_243&quot;         &quot;F2_244&quot;        
+[101] &quot;F2_245&quot;         &quot;F2_247&quot;         &quot;F2_248&quot;         &quot;F2_261&quot;        
+[105] &quot;F2_263&quot;         &quot;F2_264&quot;         &quot;F2_270&quot;         &quot;F2_271&quot;        
+[109] &quot;F2_272&quot;         &quot;F2_278&quot;         &quot;F2_287&quot;         &quot;F2_288&quot;        
+[113] &quot;F2_289&quot;         &quot;F2_290&quot;         &quot;F2_291&quot;         &quot;F2_296&quot;        
+[117] &quot;F2_298&quot;         &quot;F2_299&quot;         &quot;F2_300&quot;         &quot;F2_302&quot;        
+[121] &quot;F2_303&quot;         &quot;F2_304&quot;         &quot;F2_305&quot;         &quot;F2_306&quot;        
+[125] &quot;F2_307&quot;         &quot;F2_308&quot;         &quot;F2_309&quot;         &quot;F2_310&quot;        
+[129] &quot;F2_311&quot;         &quot;F2_312&quot;         &quot;F2_320&quot;         &quot;F2_321&quot;        
+[133] &quot;F2_323&quot;         &quot;F2_324&quot;         &quot;F2_325&quot;         &quot;F2_326&quot;        
+[137] &quot;F2_327&quot;         &quot;F2_328&quot;         &quot;F2_329&quot;         &quot;F2_330&quot;        
+[141] &quot;F2_332&quot;         &quot;F2_355&quot;         &quot;F2_357&quot;        </code></pre>
+<pre class="r"><code># 去掉一些描述性信息所在的列
+datExpr0 = as.data.frame(t(femData[, -c(1:8)]))
+colnames(datExpr0) = femData$substanceBXH
+rownames(datExpr0) = colnames(femData)[-c(1:8)]</code></pre>
+</div>
+<div id="二数据清洗" class="section level4">
+<h4>（二）数据清洗</h4>
+<div id="检查数据是否存在异常值及是否存在过多na值的sample或gene" class="section level5">
+<h5>1. 检查数据是否存在异常值，及是否存在过多NA值的sample或gene。</h5>
+<pre class="r"><code># 检查smaple或gene是否包含过多缺失值
+gsg = goodSamplesGenes(datExpr0, verbose = 3)</code></pre>
+<pre><code> Flagging genes and samples with too many missing values...
+  ..step 1</code></pre>
+<pre class="r"><code>str(gsg) # 返回一个列表。TRUE代表gene或sample不包含过多缺失值；FALSE代表包含过多缺失值</code></pre>
+<pre><code>List of 3
+ $ goodGenes  : logi [1:3600] TRUE TRUE TRUE TRUE TRUE TRUE ...
+ $ goodSamples: logi [1:135] TRUE TRUE TRUE TRUE TRUE TRUE ...
+ $ allOK      : logi TRUE</code></pre>
+<pre class="r"><code>gsg$allOK # 若为TRUE，代表所有基因和样本通过筛查；否则需要对样本和基因进行剔除。</code></pre>
+<pre><code>[1] TRUE</code></pre>
+<p>剔除不合格gene或sample的代码如下：</p>
+<pre class="r"><code>if (!gsg$allOK){
+# Optionally, print the gene and sample names that were removed:
+if (sum(!gsg$goodGenes)&gt;0)
+printFlush(paste(&quot;Removing genes:&quot;, paste(names(datExpr0)[!gsg$goodGenes], collapse = &quot;, &quot;)));
+if (sum(!gsg$goodSamples)&gt;0)
+printFlush(paste(&quot;Removing samples:&quot;, paste(rownames(datExpr0)[!gsg$goodSamples], collapse = &quot;, &quot;)));
+# Remove the offending genes and samples from the data:
+datExpr0 = datExpr0[gsg$goodSamples, gsg$goodGenes]
+}</code></pre>
+</div>
+<div id="检查异常值" class="section level5">
+<h5>2. 检查异常值</h5>
+<p>原理：对样本进行聚类，通过聚类树判断是否存在离群sample。</p>
+<p>2.1 对samples进行聚类分析。</p>
+<pre class="r"><code>sampleTree = hclust(dist(datExpr0), method = &quot;average&quot;) #dist函数默认计算样本间的欧氏距离。
+# hclust对样本按照欧氏距离进行聚类。
+# 返回结果为一个列表，包含样本名、及样本在聚类树中的位置（order和height）
+
+# 可视化
+{sizeGrWindow(12,9) # 设置图床大小
+plot(sampleTree, main = &quot;Sample clustering to detect outliers&quot;, sub=&quot;&quot;, xlab=&quot;&quot;, cex.lab = 1.5,
+cex.axis = 1.5, cex.main = 2)
+#结果解读：存在一个离群样本F2_221。
+
+# 设定切割的height阈值为15，并在图中划线展示
+abline(h = 15, col = &quot;red&quot;)}</code></pre>
+<p>2.2 去除离群值 可以手动剔除；这里使用自动剔除的方法。</p>
+<pre class="r"><code># 根据阈值确定样本的module信息
+clust = cutreeStatic(sampleTree, cutHeight = 15, minSize = 10)
+table(clust)</code></pre>
+<pre><code>clust
+  0   1 
+  1 134 </code></pre>
+<pre class="r"><code># clust 1 包含欲保留样本；而clust 0 包含离群样本
+keepSamples = (clust==1)
+datExpr = datExpr0[keepSamples, ]
+nGenes = ncol(datExpr) 
+nSamples = nrow(datExpr)
+nGenes; nSamples</code></pre>
+<pre><code>[1] 3600</code></pre>
+<pre><code>[1] 134</code></pre>
+</div>
+</div>
+</div>
+<div id="二准备临床表型信息" class="section level3">
+<h3>二、准备临床表型信息</h3>
+<div id="一导入数据并保留需要的列" class="section level4">
+<h4>(一)导入数据，并保留需要的列</h4>
+<pre class="r"><code>traitData = read.csv(&quot;./data/ClinicalTraits.csv&quot;)
+dim(traitData) </code></pre>
+<pre><code>[1] 361  38</code></pre>
+<pre class="r"><code>colnames(traitData) # 该矩阵包含361个样本的38种临床信息</code></pre>
+<pre><code> [1] &quot;X&quot;                  &quot;Mice&quot;               &quot;Number&quot;            
+ [4] &quot;Mouse_ID&quot;           &quot;Strain&quot;             &quot;sex&quot;               
+ [7] &quot;DOB&quot;                &quot;parents&quot;            &quot;Western_Diet&quot;      
+[10] &quot;Sac_Date&quot;           &quot;weight_g&quot;           &quot;length_cm&quot;         
+[13] &quot;ab_fat&quot;             &quot;other_fat&quot;          &quot;total_fat&quot;         
+[16] &quot;comments&quot;           &quot;X100xfat_weight&quot;    &quot;Trigly&quot;            
+[19] &quot;Total_Chol&quot;         &quot;HDL_Chol&quot;           &quot;UC&quot;                
+[22] &quot;FFA&quot;                &quot;Glucose&quot;            &quot;LDL_plus_VLDL&quot;     
+[25] &quot;MCP_1_phys&quot;         &quot;Insulin_ug_l&quot;       &quot;Glucose_Insulin&quot;   
+[28] &quot;Leptin_pg_ml&quot;       &quot;Adiponectin&quot;        &quot;Aortic.lesions&quot;    
+[31] &quot;Note&quot;               &quot;Aneurysm&quot;           &quot;Aortic_cal_M&quot;      
+[34] &quot;Aortic_cal_L&quot;       &quot;CoronaryArtery_Cal&quot; &quot;Myocardial_cal&quot;    
+[37] &quot;BMD_all_limbs&quot;      &quot;BMD_femurs_only&quot;   </code></pre>
+<pre class="r"><code># 筛选临床信息：只保留需要的列
+allTraits = traitData[, -c(31, 16)]
+allTraits = allTraits[, c(2, 11:36)]
+dim(allTraits)</code></pre>
+<pre><code>[1] 361  27</code></pre>
+<pre class="r"><code>colnames(allTraits) </code></pre>
+<pre><code> [1] &quot;Mice&quot;               &quot;weight_g&quot;           &quot;length_cm&quot;         
+ [4] &quot;ab_fat&quot;             &quot;other_fat&quot;          &quot;total_fat&quot;         
+ [7] &quot;X100xfat_weight&quot;    &quot;Trigly&quot;             &quot;Total_Chol&quot;        
+[10] &quot;HDL_Chol&quot;           &quot;UC&quot;                 &quot;FFA&quot;               
+[13] &quot;Glucose&quot;            &quot;LDL_plus_VLDL&quot;      &quot;MCP_1_phys&quot;        
+[16] &quot;Insulin_ug_l&quot;       &quot;Glucose_Insulin&quot;    &quot;Leptin_pg_ml&quot;      
+[19] &quot;Adiponectin&quot;        &quot;Aortic.lesions&quot;     &quot;Aneurysm&quot;          
+[22] &quot;Aortic_cal_M&quot;       &quot;Aortic_cal_L&quot;       &quot;CoronaryArtery_Cal&quot;
+[25] &quot;Myocardial_cal&quot;     &quot;BMD_all_limbs&quot;      &quot;BMD_femurs_only&quot;   </code></pre>
+<p>####（二）调整行名与表达矩阵行名一致</p>
+<pre class="r"><code>femaleSamples = rownames(datExpr)
+traitRows = match(femaleSamples, allTraits$Mice)
+datTraits = allTraits[traitRows, -1]
+rownames(datTraits) = allTraits[traitRows, 1]
+dim(datTraits)</code></pre>
+<pre><code>[1] 134  26</code></pre>
+<pre class="r"><code>head(datTraits)</code></pre>
+<pre><code>      weight_g length_cm ab_fat other_fat total_fat X100xfat_weight Trigly
+F2_2      38.0      10.5   3.81      2.78      6.59       17.342105     14
+F2_3      33.5      10.8   1.70      2.05      3.75       11.194030    109
+F2_14     33.9      10.0   1.29      1.67      2.96        8.731563      2
+F2_15     44.3      10.3   3.62      3.34      6.96       15.711061     71
+F2_19     32.9       9.7   2.08      1.85      3.93       11.945289     55
+F2_20     44.8      10.3   3.72      3.20      6.92       15.446429     34
+      Total_Chol HDL_Chol  UC FFA Glucose LDL_plus_VLDL MCP_1_phys Insulin_ug_l
+F2_2        1646       34 668 132     499          1612    202.820           NA
+F2_3        1216       27 402  96     397          1189    138.232          944
+F2_14        834       17 354  98     424           817    161.552          632
+F2_15       1565       41 536 111     557          1524    115.500         3326
+F2_19       1060       41 411 115     382          1019    148.868          426
+F2_20       1172       39 448 111     456          1133    126.012         2906
+      Glucose_Insulin Leptin_pg_ml Adiponectin Aortic.lesions Aneurysm
+F2_2               NA           NA          NA         224500       56
+F2_3        0.4205508     15148.76      14.339         296250        8
+F2_14       0.6708861      6188.74      15.439         486313       27
+F2_15       0.1674684     18400.26      11.124         180750        0
+F2_19       0.8967136      8438.70      16.842         113000        0
+F2_20       0.1569167     41801.54      13.498         166750        6
+      Aortic_cal_M Aortic_cal_L CoronaryArtery_Cal Myocardial_cal BMD_all_limbs
+F2_2             5            0                  0              0            NA
+F2_3             4           NA                  0              0            NA
+F2_14           12           NA                  1              8            NA
+F2_15            0           NA                  0              4            NA
+F2_19            0           NA                  0              0            NA
+F2_20            0           NA                  0              0            NA
+      BMD_femurs_only
+F2_2               NA
+F2_3               NA
+F2_14              NA
+F2_15              NA
+F2_19              NA
+F2_20              NA</code></pre>
+<p>小结：该步骤最终得到两个data.frame，分别为： 1. datExpr: 基因表达数据 2. datTraits：临床表型数据 并且，两个data.frame的行名均为样本名，且顺序一致。</p>
+<pre class="r"><code>rownames(datExpr)[1:10]</code></pre>
+<pre><code> [1] &quot;F2_2&quot;  &quot;F2_3&quot;  &quot;F2_14&quot; &quot;F2_15&quot; &quot;F2_19&quot; &quot;F2_20&quot; &quot;F2_23&quot; &quot;F2_24&quot; &quot;F2_26&quot;
+[10] &quot;F2_37&quot;</code></pre>
+<pre class="r"><code>rownames(datTraits)[1:10]</code></pre>
+<pre><code> [1] &quot;F2_2&quot;  &quot;F2_3&quot;  &quot;F2_14&quot; &quot;F2_15&quot; &quot;F2_19&quot; &quot;F2_20&quot; &quot;F2_23&quot; &quot;F2_24&quot; &quot;F2_26&quot;
+[10] &quot;F2_37&quot;</code></pre>
+<pre class="r"><code>identical(rownames(datExpr), rownames(datTraits))</code></pre>
+<pre><code>[1] TRUE</code></pre>
+<pre class="r"><code>collectGarbage()</code></pre>
+</div>
+</div>
+<div id="三简单数据探索" class="section level3">
+<h3>三、简单数据探索</h3>
+<p>官方教程在这里查看了临床表型如何与样本聚类树相关。</p>
+<pre class="r"><code># 对samples重新聚类
+sampleTree2 = hclust(dist(datExpr), method = &quot;average&quot;)
+
+# 临床表型数据框 →→→ 颜色矩阵：红色- 高，白色 -低，grey - NA
+traitColors = numbers2colors(datTraits, signed = FALSE)
+
+# 上：层级聚类树； 下：临床表型热图。
+plotDendroAndColors(sampleTree2, traitColors,
+groupLabels = colnames(datTraits),
+main = &quot;Sample dendrogram and trait heatmap&quot;)</code></pre>
+<img src="figure/01.%20Data%20Input,%20Cleaning%20and%20Pre-processing.Rmd/unnamed-chunk-11-1.png" width="672" style="display: block; margin: auto;" />
+<div class="alert alert-warning">
+<strong>Warning!</strong> The custom <code>fig.path</code> you set was ignored by workflowr.
+</div>
+</div>
+<div id="保存数据" class="section level3">
+<h3>保存数据</h3>
+<pre class="r"><code>save(datExpr, datTraits, file = &quot;./output/FemaleLiver-01-dataInput.RData&quot;)</code></pre>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.1.0 (2021-05-18)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Big Sur 10.16
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.1/Resources/lib/libRblas.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.1/Resources/lib/libRlapack.dylib
+
+locale:
+[1] zh_CN.UTF-8/zh_CN.UTF-8/zh_CN.UTF-8/C/zh_CN.UTF-8/zh_CN.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] WGCNA_1.70-3          fastcluster_1.2.3     dynamicTreeCut_1.63-1
+
+loaded via a namespace (and not attached):
+  [1] bitops_1.0-7           matrixStats_0.60.0     fs_1.5.0              
+  [4] bit64_4.0.5            doParallel_1.0.16      RColorBrewer_1.1-2    
+  [7] httr_1.4.2             rprojroot_2.0.2        GenomeInfoDb_1.28.1   
+ [10] backports_1.2.1        tools_4.1.0            bslib_0.2.5.1         
+ [13] utf8_1.2.2             R6_2.5.0               rpart_4.1-15          
+ [16] Hmisc_4.5-0            DBI_1.1.1              BiocGenerics_0.38.0   
+ [19] colorspace_2.0-2       nnet_7.3-16            tidyselect_1.1.1      
+ [22] gridExtra_2.3          preprocessCore_1.54.0  bit_4.0.4             
+ [25] compiler_4.1.0         git2r_0.28.0           Biobase_2.52.0        
+ [28] htmlTable_2.2.1        sass_0.4.0             checkmate_2.0.0       
+ [31] scales_1.1.1           stringr_1.4.0          digest_0.6.27         
+ [34] foreign_0.8-81         rmarkdown_2.10         XVector_0.32.0        
+ [37] base64enc_0.1-3        jpeg_0.1-9             pkgconfig_2.0.3       
+ [40] htmltools_0.5.1.1      highr_0.9              fastmap_1.1.0         
+ [43] htmlwidgets_1.5.3      rlang_0.4.11           impute_1.66.0         
+ [46] rstudioapi_0.13        RSQLite_2.2.7          jquerylib_0.1.4       
+ [49] generics_0.1.0         jsonlite_1.7.2         dplyr_1.0.7           
+ [52] RCurl_1.98-1.3         magrittr_2.0.1         GO.db_3.13.0          
+ [55] GenomeInfoDbData_1.2.6 Formula_1.2-4          Matrix_1.3-4          
+ [58] Rcpp_1.0.7             munsell_0.5.0          S4Vectors_0.30.0      
+ [61] fansi_0.5.0            lifecycle_1.0.0        stringi_1.7.3         
+ [64] whisker_0.4            yaml_2.2.1             zlibbioc_1.38.0       
+ [67] grid_4.1.0             blob_1.2.2             parallel_4.1.0        
+ [70] promises_1.2.0.1       crayon_1.4.1           lattice_0.20-44       
+ [73] Biostrings_2.60.2      splines_4.1.0          KEGGREST_1.32.0       
+ [76] knitr_1.33             pillar_1.6.2           codetools_0.2-18      
+ [79] stats4_4.1.0           glue_1.4.2             evaluate_0.14         
+ [82] latticeExtra_0.6-29    data.table_1.14.0      png_0.1-7             
+ [85] vctrs_0.3.8            httpuv_1.6.1           foreach_1.5.1         
+ [88] gtable_0.3.0           purrr_0.3.4            assertthat_0.2.1      
+ [91] cachem_1.0.5           ggplot2_3.3.5          xfun_0.25             
+ [94] later_1.2.0            survival_3.2-11        tibble_3.1.3          
+ [97] iterators_1.0.13       AnnotationDbi_1.54.1   memoise_2.0.0         
+[100] IRanges_2.26.0         workflowr_1.6.2        cluster_2.1.2         
+[103] ellipsis_0.3.2        </code></pre>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+http://docs.mathjax.org/en/latest/configuration.html.  This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
